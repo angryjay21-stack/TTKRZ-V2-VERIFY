@@ -1,0 +1,16 @@
+{
+  "name": "ttkrz-v2-verify",
+  "version": "1.0.0",
+  "description": "TTKRZ V2 verification bot with role button",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.5"
+  }
+}
