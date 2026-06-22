@@ -17,7 +17,9 @@ const VERIFY_CHANNEL_ID = process.env.VERIFY_CHANNEL_ID;
 const VERIFY_ROLE_ID = process.env.VERIFY_ROLE_ID;
 
 if (!TOKEN || !VERIFY_CHANNEL_ID || !VERIFY_ROLE_ID) {
-  console.error('Missing variables. Add DISCORD_TOKEN, VERIFY_CHANNEL_ID, and VERIFY_ROLE_ID.');
+  console.error(
+    'Missing variables. Add DISCORD_TOKEN, VERIFY_CHANNEL_ID and VERIFY_ROLE_ID.'
+  );
   process.exit(1);
 }
 
@@ -28,14 +30,14 @@ const client = new Client({
 const VERIFY_BUTTON_ID = 'ttkrz_v2_verify_button';
 
 function buildVerifyMessage() {
-  const banner = new AttachmentBuilder('./verify-banner.png', { name: 'verify-banner.png' });
-  const logo = new AttachmentBuilder('./logo.png', { name: 'logo.png' });
+  const banner = new AttachmentBuilder('./download.png', {
+    name: 'download.png',
+  });
 
   const embed = new EmbedBuilder()
-    .setColor(0x1ea7ff)
+    .setColor('#1ea7ff')
     .setAuthor({
-      name: 'TTKRZ V2 Verification',
-      iconURL: 'attachment://logo.png',
+      name: 'TTKRZ V2 VERIFY BOT',
     })
     .setTitle('TTKRZ V2 Verification')
     .setDescription(
@@ -43,84 +45,90 @@ function buildVerifyMessage() {
       'Click the green verify button below to enter the server.\n' +
       'Make sure you have read the rules before loading into the city.'
     )
-    .setImage('attachment://verify-banner.png')
+    .setImage('attachment://download.png')
     .setFooter({
       text: 'TTKRZ Verification Bot 3.0 • Secure access for new members',
-      iconURL: 'attachment://logo.png',
     })
     .setTimestamp();
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(VERIFY_BUTTON_ID)
-      .setLabel('✓  Verify')
+      .setLabel('✓ Verify')
       .setStyle(ButtonStyle.Success)
   );
 
   return {
-    content: 'Welcome to TTKRZ V2.\nPress verify below to unlock the city and get access to the server.',
+    content:
+      'Welcome to TTKRZ V2.\nPress verify below to unlock the city and get access to the server.',
     embeds: [embed],
     components: [row],
-    files: [banner, logo],
+    files: [banner],
   };
 }
 
 client.once(Events.ClientReady, async () => {
   console.log(`${client.user.tag} is online.`);
 
-  const channel = await client.channels.fetch(VERIFY_CHANNEL_ID).catch(() => null);
-  if (!channel || !channel.isTextBased()) {
-    console.error('VERIFY_CHANNEL_ID is not a text channel or the bot cannot see it.');
-    return;
-  }
+  try {
+    const channel = await client.channels.fetch(VERIFY_CHANNEL_ID);
 
-  const me = channel.guild.members.me;
-  if (!me.permissionsIn(channel).has(PermissionsBitField.Flags.SendMessages)) {
-    console.error('Bot needs Send Messages permission in the verify channel.');
-    return;
-  }
+    if (!channel || !channel.isTextBased()) {
+      console.error('VERIFY_CHANNEL_ID is invalid.');
+      return;
+    }
 
-  const messages = await channel.messages.fetch({ limit: 25 }).catch(() => null);
-  const alreadySent = messages?.some(
-    (msg) =>
-      msg.author.id === client.user.id &&
-      msg.components?.some((row) =>
-        row.components?.some((button) => button.customId === VERIFY_BUTTON_ID)
-      )
-  );
+    const messages = await channel.messages.fetch({ limit: 50 });
 
-  if (!alreadySent) {
-    await channel.send(buildVerifyMessage());
-    console.log('Verify panel sent.');
-  } else {
-    console.log('Verify panel already exists, not sending another one.');
+    const existingPanel = messages.find(
+      (msg) =>
+        msg.author.id === client.user.id &&
+        msg.components.length > 0
+    );
+
+    if (!existingPanel) {
+      await channel.send(buildVerifyMessage());
+      console.log('Verify panel sent.');
+    } else {
+      console.log('Verify panel already exists.');
+    }
+  } catch (err) {
+    console.error(err);
   }
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isButton() || interaction.customId !== VERIFY_BUTTON_ID) return;
+  if (!interaction.isButton()) return;
+  if (interaction.customId !== VERIFY_BUTTON_ID) return;
 
-  const role = interaction.guild.roles.cache.get(VERIFY_ROLE_ID)
-    || await interaction.guild.roles.fetch(VERIFY_ROLE_ID).catch(() => null);
+  const role =
+    interaction.guild.roles.cache.get(VERIFY_ROLE_ID) ||
+    (await interaction.guild.roles.fetch(VERIFY_ROLE_ID).catch(() => null));
 
   if (!role) {
     return interaction.reply({
-      content: 'Verify role was not found. Check VERIFY_ROLE_ID.',
+      content: 'Verify role not found.',
       ephemeral: true,
     });
   }
 
   const botMember = interaction.guild.members.me;
-  if (!botMember.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
+
+  if (
+    !botMember.permissions.has(
+      PermissionsBitField.Flags.ManageRoles
+    )
+  ) {
     return interaction.reply({
-      content: 'I need the Manage Roles permission to verify you.',
+      content: 'Bot needs Manage Roles permission.',
       ephemeral: true,
     });
   }
 
   if (role.position >= botMember.roles.highest.position) {
     return interaction.reply({
-      content: 'Move my bot role above the verify role in Server Settings > Roles.',
+      content:
+        'Move the bot role above the verify role in Server Settings → Roles.',
       ephemeral: true,
     });
   }
@@ -135,7 +143,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   await interaction.member.roles.add(role);
 
   return interaction.reply({
-    content: `You are now verified, ${interaction.user}. Welcome to TTKRZ V2.`,
+    content: `✅ You are now verified, ${interaction.user}. Welcome to TTKRZ V2.`,
     ephemeral: true,
   });
 });
